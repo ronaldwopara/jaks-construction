@@ -18,6 +18,8 @@ npm run build
 2. Vercel detects **Vite**. Defaults: **Build Command** `npm run build`, **Output** `dist` (also set in `vercel.json`).
 3. Click **Deploy**.
 
+Live site: **https://jaks-landing.vercel.app** (production; future pushes to `main` redeploy automatically).
+
 **Option B — CLI**
 
 ```bash
