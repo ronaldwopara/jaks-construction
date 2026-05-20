@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Menu, X, ArrowUpRight, Star, Phone, Mail, MapPin } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import HeroCanvas from './HeroCanvas'
+import { SERVICES } from './services'
 
 const observerMap = new Map()
 
@@ -44,19 +46,6 @@ function useInView({ threshold = 0.1, rootMargin = '0px', enabled = true } = {})
 
   return [ref, isVisible]
 }
-
-// Grain texture (data-URL SVG must apply the filter to a rect or nothing shows)
-const FilmGrain = () => (
-  <div
-    className="pointer-events-none fixed inset-0 z-[999] opacity-[0.05] mix-blend-screen"
-    style={{
-      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-      backgroundRepeat: 'repeat',
-      backgroundSize: '150px 150px',
-    }}
-    aria-hidden
-  />
-)
 
 const TiltSlab = ({ children }) => {
   const ref = useRef(null)
@@ -158,6 +147,7 @@ const FOOTER_SOCIAL = [
 ]
 
 export default function JaksConcrete() {
+  const introSeen = typeof window !== 'undefined' && window.sessionStorage?.getItem('tyd_intro_seen') === '1'
   const [isScrolled, setIsScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeNav, setActiveNav] = useState('home')
@@ -165,8 +155,8 @@ export default function JaksConcrete() {
   const [displayProgress, setDisplayProgress] = useState(0)
   const [loadComplete, setLoadComplete] = useState(false)
   const [introContentReady, setIntroContentReady] = useState(false)
-  const [doorOpen, setDoorOpen] = useState(false)
-  const [overlayVisible, setOverlayVisible] = useState(true)
+  const [doorOpen, setDoorOpen] = useState(() => (introSeen ? true : false))
+  const [overlayVisible, setOverlayVisible] = useState(() => (introSeen ? false : true))
   const loaderStartRef = useRef(0)
   const [activeService, setActiveService] = useState(null)
   const heroScrollRef = useRef(0)
@@ -179,13 +169,10 @@ export default function JaksConcrete() {
   const heroStickyRef = useRef(null)
   const heroTextRef = useRef(null)
   const imageRevealRef = useRef(null)
-  const ringRef = useRef(null)
-  const dotRef = useRef(null)
-  const labelRef = useRef(null)
   const brandCrimson = '#FF1E56'
   // Light theme palette (paper + ink).
   const bgPaper = '#F6F3EE'
-  const textInk = '#111827'
+  // const textInk = '#111827'
 
   const handleHeroLoadProgress = useCallback((loaded, total) => {
     const pct = Math.min(100, Math.round((loaded / total) * 100))
@@ -193,7 +180,9 @@ export default function JaksConcrete() {
     if (loaded >= total) {
       setLoadProgress(100)
       setLoadComplete(true)
-      window.scrollTo(0, 0)
+      if (!(typeof window !== 'undefined' && window.sessionStorage?.getItem('tyd_intro_seen') === '1')) {
+        window.scrollTo(0, 0)
+      }
     }
   }, [])
 
@@ -238,16 +227,19 @@ export default function JaksConcrete() {
     }
     window.dispatchEvent(new Event('scroll'))
     window.dispatchEvent(new Event('resize'))
-    const t = setTimeout(() => setOverlayVisible(false), 2350)
+    const t = setTimeout(() => {
+      try {
+        window.sessionStorage?.setItem('tyd_intro_seen', '1')
+      } catch {
+        // ignore
+      }
+      setOverlayVisible(false)
+    }, 2350)
     return () => clearTimeout(t)
   }, [doorOpen])
 
   useEffect(() => {
     let wasScrolled = false
-
-    // #region agent log
-    fetch('http://127.0.0.1:7771/ingest/4eb8e336-dd5f-4ee3-b879-c005834e02fa',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a3a024'},body:JSON.stringify({sessionId:'a3a024',location:'JaksConcrete.jsx:245',message:'Initial mount dimensions',data:{innerWidth:window.innerWidth,innerHeight:window.innerHeight,heroElOffsetHeight:heroSectionRef.current?.offsetHeight,heroStickyOffsetHeight:heroStickyRef.current?.offsetHeight,screenWidth:window.screen.width,screenHeight:window.screen.height},timestamp:Date.now(),hypothesisId:'H1,H2,H3'})}).catch(()=>{});
-    // #endregion
 
     const handleScroll = () => {
       const sy = window.scrollY
@@ -261,15 +253,6 @@ export default function JaksConcrete() {
       if (heroEl) {
         const rect = heroEl.getBoundingClientRect()
         const sectionH = heroEl.offsetHeight - window.innerHeight
-        
-        // #region agent log
-        const p_raw = -rect.top / sectionH
-        const p_clamped = Math.min(Math.max(p_raw, 0), 1)
-        const rectBottom = rect.bottom
-        const isHeroFullyScrolled = rectBottom <= window.innerHeight
-        fetch('http://127.0.0.1:7771/ingest/4eb8e336-dd5f-4ee3-b879-c005834e02fa',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a3a024'},body:JSON.stringify({sessionId:'a3a024',location:'JaksConcrete.jsx:258',message:'Hero scroll calculation',data:{scrollY:sy,rectTop:rect.top,rectBottom:rectBottom,heroElOffsetHeight:heroEl.offsetHeight,stickyH:window.innerHeight,sectionH:sectionH,p_raw:p_raw,p_clamped:p_clamped,innerHeight:window.innerHeight,viewportWidth:window.innerWidth,heroElScrollHeight:heroEl.scrollHeight,heroElClientHeight:heroEl.clientHeight,isHeroFullyScrolled:isHeroFullyScrolled},timestamp:Date.now(),hypothesisId:'H6'})}).catch(()=>{});
-        // #endregion
-        
         if (sectionH > 0) {
           const p = Math.min(Math.max(-rect.top / sectionH, 0), 1)
           heroScrollRef.current = p
@@ -304,127 +287,10 @@ export default function JaksConcrete() {
     }
     handleScroll()
     window.addEventListener('scroll', handleScroll, { passive: true })
-    
-    // #region agent log
-    const handleResize = () => {
-      fetch('http://127.0.0.1:7771/ingest/4eb8e336-dd5f-4ee3-b879-c005834e02fa',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a3a024'},body:JSON.stringify({sessionId:'a3a024',location:'JaksConcrete.jsx:304',message:'Window resize',data:{innerWidth:window.innerWidth,innerHeight:window.innerHeight,heroElOffsetHeight:heroSectionRef.current?.offsetHeight,heroStickyOffsetHeight:heroStickyRef.current?.offsetHeight},timestamp:Date.now(),hypothesisId:'H2,H3'})}).catch(()=>{});
-    }
-    window.addEventListener('resize', handleResize, { passive: true })
-    // #endregion
-    
-    return () => {
-      window.removeEventListener('scroll', handleScroll)
-      // #region agent log
-      window.removeEventListener('resize', handleResize)
-      // #endregion
-    }
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  useEffect(() => {
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
-    if (isTouchDevice) return
-
-    let mouseX = window.innerWidth / 2
-    let mouseY = window.innerHeight / 2
-    let ringX = mouseX, ringY = mouseY
-    let dotX = mouseX, dotY = mouseY
-    let ringSize = 40, targetRingSize = 40
-    let ringOpacity = 0.4, targetRingOpacity = 0.4
-    let dotScale = 1, targetDotScale = 1
-    let labelOpacity = 0, targetLabelOpacity = 0
-    let reqId
-    let currentState = 'default'
-
-    const RING_LERP = 0.065
-    const DOT_LERP = 0.25
-    const SIZE_LERP = 0.1
-    const OPACITY_LERP = 0.08
-
-    const onMouseMove = (e) => {
-      mouseX = e.clientX
-      mouseY = e.clientY
-    }
-
-    const resolveState = (e) => {
-      const target = e.target.closest('[data-cursor]')
-      if (target) return target.getAttribute('data-cursor')
-      if (e.target.closest('a, button, [role="button"]')) return 'hover'
-      return 'default'
-    }
-
-    const onMouseOver = (e) => {
-      const newState = resolveState(e)
-      if (newState === currentState) return
-      currentState = newState
-
-      if (newState === 'view') {
-        targetRingSize = 120
-        targetRingOpacity = 1
-        targetDotScale = 0
-        targetLabelOpacity = 1
-      } else if (newState === 'hover') {
-        targetRingSize = 64
-        targetRingOpacity = 0.7
-        targetDotScale = 0.6
-        targetLabelOpacity = 0
-      } else {
-        targetRingSize = 40
-        targetRingOpacity = 0.4
-        targetDotScale = 1
-        targetLabelOpacity = 0
-      }
-    }
-
-    const animate = () => {
-      ringX += (mouseX - ringX) * RING_LERP
-      ringY += (mouseY - ringY) * RING_LERP
-      dotX += (mouseX - dotX) * DOT_LERP
-      dotY += (mouseY - dotY) * DOT_LERP
-      ringSize += (targetRingSize - ringSize) * SIZE_LERP
-      ringOpacity += (targetRingOpacity - ringOpacity) * OPACITY_LERP
-      dotScale += (targetDotScale - dotScale) * SIZE_LERP
-      labelOpacity += (targetLabelOpacity - labelOpacity) * OPACITY_LERP
-
-      if (ringRef.current) {
-        ringRef.current.style.transform = `translate3d(${ringX}px, ${ringY}px, 0) translate(-50%, -50%)`
-        ringRef.current.style.width = `${ringSize}px`
-        ringRef.current.style.height = `${ringSize}px`
-        ringRef.current.style.opacity = ringOpacity
-      }
-
-      if (dotRef.current) {
-        dotRef.current.style.transform = `translate3d(${dotX}px, ${dotY}px, 0) translate(-50%, -50%) scale(${dotScale})`
-      }
-
-      if (labelRef.current) {
-        labelRef.current.style.opacity = labelOpacity
-        labelRef.current.style.transform = `scale(${0.6 + labelOpacity * 0.4})`
-      }
-
-      reqId = requestAnimationFrame(animate)
-    }
-
-    window.addEventListener('mousemove', onMouseMove, { passive: true })
-    window.addEventListener('mouseover', onMouseOver, { passive: true })
-    reqId = requestAnimationFrame(animate)
-
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove)
-      window.removeEventListener('mouseover', onMouseOver)
-      cancelAnimationFrame(reqId)
-    }
-  }, [])
-
-
-
-  const services = [
-    { id: 'I', title: 'Driveways', img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=800&auto=format&fit=crop' },
-    { id: 'II', title: 'Garage Pads', img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=800&auto=format&fit=crop' },
-    { id: 'III', title: 'Patios', img: 'https://images.unsplash.com/photo-1600607688969-a5bfcd646154?q=80&w=800&auto=format&fit=crop' },
-    { id: 'IV', title: 'Structural Steps', img: 'https://images.unsplash.com/photo-1555636222-cae831e670b3?q=80&w=800&auto=format&fit=crop' },
-    { id: 'V', title: 'Exposed Aggregate', img: 'https://images.unsplash.com/photo-1518005020951-eccb494ad742?q=80&w=800&auto=format&fit=crop' },
-    { id: 'VI', title: 'Stamped Finishes', img: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?q=80&w=800&auto=format&fit=crop' },
-  ]
+  const services = SERVICES
 
   const testimonials = [
     {
@@ -445,88 +311,8 @@ export default function JaksConcrete() {
     },
   ]
 
-  // #region agent log
-  useEffect(() => {
-    const findOverflow = (label) => {
-      const vw = document.documentElement.clientWidth
-      const sw = document.documentElement.scrollWidth
-      const overflowing = []
-      document.querySelectorAll('*').forEach(el => {
-        const r = el.getBoundingClientRect()
-        if (r.right > vw + 2 || r.left < -2) {
-          overflowing.push({
-            tag: el.tagName,
-            id: el.id || '',
-            cls: (el.className && typeof el.className === 'string') ? el.className.slice(0, 120) : '',
-            left: Math.round(r.left),
-            right: Math.round(r.right),
-            width: Math.round(r.width),
-            text: (el.textContent || '').slice(0, 40)
-          })
-        }
-      })
-      fetch('http://127.0.0.1:7771/ingest/4eb8e336-dd5f-4ee3-b879-c005834e02fa',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a3a024'},body:JSON.stringify({sessionId:'a3a024',location:'JaksConcrete.jsx:overflow-check',message:'DOM overflow scan '+label,data:{viewportWidth:vw,scrollWidth:sw,hasOverflow:sw>vw,overflowingCount:overflowing.length,elements:overflowing.slice(0,15)},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H4-H5'})}).catch(()=>{})
-    }
-    findOverflow('0ms')
-    const t = setTimeout(() => findOverflow('500ms'), 500)
-    const t2 = setTimeout(() => findOverflow('2000ms'), 2000)
-    return () => { clearTimeout(t); clearTimeout(t2) }
-  }, [])
-  // #endregion
-
   return (
-    <div
-      className="min-h-screen font-sans antialiased selection:bg-[#FF1E56] selection:text-white md:cursor-none"
-      style={{ backgroundColor: bgPaper, color: textInk }}
-    >
-      <FilmGrain />
-
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-        *, *::before, *::after { box-sizing: border-box; }
-        html { scroll-behavior: smooth; background: ${bgPaper}; }
-        body { background: ${bgPaper}; overflow-x: hidden; max-width: 100vw; }
-        img, video, canvas, svg, iframe, embed, object { max-width: 100%; height: auto; }
-        pre, code { max-width: 100%; overflow-x: auto; }
-        .animate-marquee { max-width: none !important; width: max-content; }
-        .font-monumental { font-family: 'Playfair Display', 'Cinzel', serif; }
-        @keyframes marquee { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
-        .animate-marquee { animation: marquee 50s linear infinite; }
-        .liquid-cta::before {
-          content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 0%;
-          background: ${brandCrimson}; transition: height 0.6s cubic-bezier(0.7, 0, 0.2, 1); z-index: -1;
-        }
-        .liquid-cta:hover::before { height: 100%; }
-      `,
-        }}
-      />
-
-      <div
-        ref={ringRef}
-        className="pointer-events-none fixed left-0 top-0 z-[100] hidden items-center justify-center rounded-full border border-black/60 md:flex"
-        style={{
-          width: '40px',
-          height: '40px',
-          opacity: 0.4,
-          mixBlendMode: 'multiply',
-          willChange: 'transform, width, height, opacity',
-        }}
-      >
-        <span
-          ref={labelRef}
-          className="select-none whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.3em] text-black"
-          style={{ opacity: 0, willChange: 'transform, opacity' }}
-        >
-          View
-        </span>
-      </div>
-
-      <div
-        ref={dotRef}
-        className="pointer-events-none fixed left-0 top-0 z-[101] hidden h-2 w-2 rounded-full bg-black md:block"
-        style={{ mixBlendMode: 'multiply', willChange: 'transform' }}
-      />
+    <>
 
       {overlayVisible ? (
         <div
@@ -837,11 +623,48 @@ export default function JaksConcrete() {
           </FadeIn>
         </div>
 
-        <div className="grid grid-cols-1 gap-16 lg:grid-cols-12">
+        {/* Mobile: tappable image cards (fast, touch-friendly) */}
+        <div className="grid grid-cols-1 gap-6 lg:hidden">
+          {services.map((service) => (
+            <Link
+              key={service.slug}
+              to={`/gallery/${service.slug}`}
+              className="group relative overflow-hidden border border-black/20 bg-white/70 shadow-sm shadow-black/5 transition-transform duration-300 active:scale-[0.985]"
+            >
+              <div className="relative aspect-[16/10] w-full">
+                <img
+                  src={service.thumb}
+                  alt={service.title}
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 h-full w-full object-cover brightness-[0.55] grayscale transition-transform duration-[1400ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4">
+                  <div className="min-w-0">
+                    <span className="block text-[11px] font-bold uppercase tracking-[0.55em] text-white/70">
+                      {service.id}
+                    </span>
+                    <span className="font-monumental mt-2 block truncate text-3xl uppercase tracking-tighter text-white">
+                      {service.title}
+                    </span>
+                  </div>
+                  <span className="shrink-0 text-[11px] font-bold uppercase tracking-[0.35em] text-white/80">
+                    View
+                  </span>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        {/* Desktop: hover-list + sticky preview */}
+        <div className="hidden grid-cols-1 gap-16 lg:grid lg:grid-cols-12">
           <div className="z-10 border-t border-black/20 lg:col-span-7">
             {services.map((service, index) => (
-              <div
-                key={service.id}
+              <Link
+                key={service.slug}
+                to={`/gallery/${service.slug}`}
                 className="group relative flex flex-col justify-between border-b border-black/20 py-6 transition-all duration-700 hover:bg-black/[0.05] hover:px-8 md:flex-row md:items-center md:py-8"
                 onMouseEnter={() => setActiveService(index)}
                 onMouseLeave={() => setActiveService(null)}
@@ -859,7 +682,7 @@ export default function JaksConcrete() {
                   size={32}
                   className="hidden translate-y-full transform opacity-0 transition-all duration-700 group-hover:translate-y-0 group-hover:opacity-100 md:block md:text-[#FF1E56]"
                 />
-              </div>
+              </Link>
             ))}
           </div>
 
@@ -868,8 +691,8 @@ export default function JaksConcrete() {
               <div ref={imageRevealRef} className="absolute inset-0 h-full w-full">
                 {services.map((service, index) => (
                   <img
-                    key={service.id}
-                    src={service.img}
+                    key={service.slug}
+                    src={service.thumb}
                     alt={service.title}
                     loading="lazy"
                     decoding="async"
@@ -1201,6 +1024,6 @@ export default function JaksConcrete() {
           </div>
         </div>
       </footer>
-    </div>
+    </>
   )
 }
