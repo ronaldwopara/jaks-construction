@@ -176,6 +176,7 @@ export default function JaksConcrete() {
   const introLoaderTaglineRef = useRef(null)
 
   const heroSectionRef = useRef(null)
+  const heroStickyRef = useRef(null)
   const heroTextRef = useRef(null)
   const imageRevealRef = useRef(null)
   const ringRef = useRef(null)
@@ -244,6 +245,10 @@ export default function JaksConcrete() {
   useEffect(() => {
     let wasScrolled = false
 
+    // #region agent log
+    fetch('http://127.0.0.1:7771/ingest/4eb8e336-dd5f-4ee3-b879-c005834e02fa',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a3a024'},body:JSON.stringify({sessionId:'a3a024',location:'JaksConcrete.jsx:245',message:'Initial mount dimensions',data:{innerWidth:window.innerWidth,innerHeight:window.innerHeight,heroElOffsetHeight:heroSectionRef.current?.offsetHeight,heroStickyOffsetHeight:heroStickyRef.current?.offsetHeight,screenWidth:window.screen.width,screenHeight:window.screen.height},timestamp:Date.now(),hypothesisId:'H1,H2,H3'})}).catch(()=>{});
+    // #endregion
+
     const handleScroll = () => {
       const sy = window.scrollY
       const nowScrolled = sy > 50
@@ -256,6 +261,15 @@ export default function JaksConcrete() {
       if (heroEl) {
         const rect = heroEl.getBoundingClientRect()
         const sectionH = heroEl.offsetHeight - window.innerHeight
+        
+        // #region agent log
+        const p_raw = -rect.top / sectionH
+        const p_clamped = Math.min(Math.max(p_raw, 0), 1)
+        const rectBottom = rect.bottom
+        const isHeroFullyScrolled = rectBottom <= window.innerHeight
+        fetch('http://127.0.0.1:7771/ingest/4eb8e336-dd5f-4ee3-b879-c005834e02fa',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a3a024'},body:JSON.stringify({sessionId:'a3a024',location:'JaksConcrete.jsx:258',message:'Hero scroll calculation',data:{scrollY:sy,rectTop:rect.top,rectBottom:rectBottom,heroElOffsetHeight:heroEl.offsetHeight,stickyH:window.innerHeight,sectionH:sectionH,p_raw:p_raw,p_clamped:p_clamped,innerHeight:window.innerHeight,viewportWidth:window.innerWidth,heroElScrollHeight:heroEl.scrollHeight,heroElClientHeight:heroEl.clientHeight,isHeroFullyScrolled:isHeroFullyScrolled},timestamp:Date.now(),hypothesisId:'H6'})}).catch(()=>{});
+        // #endregion
+        
         if (sectionH > 0) {
           const p = Math.min(Math.max(-rect.top / sectionH, 0), 1)
           heroScrollRef.current = p
@@ -290,7 +304,20 @@ export default function JaksConcrete() {
     }
     handleScroll()
     window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
+    
+    // #region agent log
+    const handleResize = () => {
+      fetch('http://127.0.0.1:7771/ingest/4eb8e336-dd5f-4ee3-b879-c005834e02fa',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a3a024'},body:JSON.stringify({sessionId:'a3a024',location:'JaksConcrete.jsx:304',message:'Window resize',data:{innerWidth:window.innerWidth,innerHeight:window.innerHeight,heroElOffsetHeight:heroSectionRef.current?.offsetHeight,heroStickyOffsetHeight:heroStickyRef.current?.offsetHeight},timestamp:Date.now(),hypothesisId:'H2,H3'})}).catch(()=>{});
+    }
+    window.addEventListener('resize', handleResize, { passive: true })
+    // #endregion
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      // #region agent log
+      window.removeEventListener('resize', handleResize)
+      // #endregion
+    }
   }, [])
 
   useEffect(() => {
@@ -420,7 +447,7 @@ export default function JaksConcrete() {
 
   return (
     <div
-      className="min-h-screen overflow-x-hidden font-sans antialiased selection:bg-[#FF1E56] selection:text-white md:cursor-none"
+      className="min-h-screen font-sans antialiased selection:bg-[#FF1E56] selection:text-white md:cursor-none"
       style={{ backgroundColor: bgPaper, color: textInk }}
     >
       <FilmGrain />
@@ -428,9 +455,8 @@ export default function JaksConcrete() {
       <style
         dangerouslySetInnerHTML={{
           __html: `
-        html { scroll-behavior: smooth; background: ${bgPaper}; overflow-x: hidden; }
-        body { background: ${bgPaper}; overflow-x: hidden; }
-        #root { overflow-x: hidden; }
+        html { scroll-behavior: smooth; background: ${bgPaper}; }
+        body { background: ${bgPaper}; overflow-x: hidden; max-width: 100vw; }
         .font-monumental { font-family: 'Playfair Display', 'Cinzel', serif; }
         @keyframes marquee { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
         .animate-marquee { animation: marquee 50s linear infinite; }
@@ -643,8 +669,11 @@ export default function JaksConcrete() {
         </div>
       ) : null}
 
-      <section ref={heroSectionRef} id="home" className="relative h-[250vh]">
-        <div className="sticky top-0 flex h-screen min-h-[700px] flex-col items-center justify-center overflow-hidden">
+      <section ref={heroSectionRef} id="home" className="relative h-[200vh]">
+        <div
+          ref={heroStickyRef}
+          className="sticky top-0 flex h-screen flex-col items-center justify-center overflow-hidden"
+        >
           <div className="absolute inset-0 -z-10 overflow-hidden">
             <div ref={heroCanvasWrapRef} className="absolute inset-0 origin-center will-change-transform">
               <div className="absolute inset-0 opacity-80 brightness-[0.9] contrast-[1.1] filter">
