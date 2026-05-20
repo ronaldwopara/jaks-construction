@@ -16,6 +16,7 @@ const FilmGrain = () => (
 
 export default function Layout({ children }) {
   const location = useLocation()
+  const isGallery = location.pathname.startsWith('/gallery')
   const ringRef = useRef(null)
   const dotRef = useRef(null)
   const labelRef = useRef(null)
@@ -49,8 +50,8 @@ export default function Layout({ children }) {
 
     let ringSize = 40
     let targetRingSize = 40
-    let ringOpacity = 0.9
-    let targetRingOpacity = 0.9
+    let ringOpacity = isGallery ? 0.9 : 0.4
+    let targetRingOpacity = isGallery ? 0.9 : 0.4
     let dotScale = 1
     let targetDotScale = 1
     let labelOpacity = 0
@@ -91,13 +92,13 @@ export default function Layout({ children }) {
         targetLabelText = 'Exit'
       } else if (state === 'hover') {
         targetRingSize = 64
-        targetRingOpacity = 1
+        targetRingOpacity = isGallery ? 1 : 0.7
         targetDotScale = 0.6
         targetLabelOpacity = 0
         targetLabelText = ''
       } else {
         targetRingSize = 40
-        targetRingOpacity = 0.9
+        targetRingOpacity = isGallery ? 0.9 : 0.4
         targetDotScale = 1
         targetLabelOpacity = 0
         targetLabelText = ''
@@ -131,7 +132,11 @@ export default function Layout({ children }) {
         ringRef.current.style.width = `${ringSize}px`
         ringRef.current.style.height = `${ringSize}px`
         ringRef.current.style.opacity = ringOpacity
-        ringRef.current.style.borderColor = 'rgba(255,255,255,1)'
+        ringRef.current.style.borderColor = isGallery
+          ? 'rgba(255,255,255,1)'
+          : currentState === 'exit'
+            ? brandCrimson
+            : 'rgba(0,0,0,0.6)'
       }
 
       if (dotRef.current) {
@@ -142,7 +147,11 @@ export default function Layout({ children }) {
       if (labelRef.current) {
         labelRef.current.style.opacity = labelOpacity
         labelRef.current.style.transform = `scale(${0.6 + labelOpacity * 0.4})`
-        labelRef.current.style.color = 'rgba(255,255,255,1)'
+        labelRef.current.style.color = isGallery
+          ? 'rgba(255,255,255,1)'
+          : currentState === 'exit'
+            ? brandCrimson
+            : '#111827'
       }
 
       reqId = requestAnimationFrame(animate)
@@ -158,7 +167,7 @@ export default function Layout({ children }) {
       window.removeEventListener('mouseover', onMouseOver)
       cancelAnimationFrame(reqId)
     }
-  }, [])
+  }, [isGallery, brandCrimson])
 
   return (
     <div
@@ -190,18 +199,22 @@ export default function Layout({ children }) {
 
       <div
         ref={ringRef}
-        className="pointer-events-none fixed left-0 top-0 z-[100] hidden items-center justify-center rounded-full border-2 md:flex"
+        className={`pointer-events-none fixed left-0 top-0 z-[100] hidden items-center justify-center rounded-full md:flex ${
+          isGallery ? 'border-2' : 'border'
+        }`}
         style={{
           width: '40px',
           height: '40px',
-          opacity: 0.9,
-          mixBlendMode: 'normal',
+          opacity: isGallery ? 0.9 : 0.4,
+          mixBlendMode: isGallery ? 'normal' : 'multiply',
           willChange: 'transform, width, height, opacity',
         }}
       >
         <span
           ref={labelRef}
-          className="select-none whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.3em]"
+          className={`select-none whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.3em] ${
+            isGallery ? 'text-white' : 'text-black'
+          }`}
           style={{ opacity: 0, willChange: 'transform, opacity' }}
         >
           View
@@ -210,8 +223,14 @@ export default function Layout({ children }) {
 
       <div
         ref={dotRef}
-        className="pointer-events-none fixed left-0 top-0 z-[101] hidden h-2 w-2 rounded-full bg-black md:block"
-        style={{ mixBlendMode: 'normal', willChange: 'transform', backgroundColor: 'rgba(255,255,255,1)' }}
+        className={`pointer-events-none fixed left-0 top-0 z-[101] hidden h-2 w-2 rounded-full md:block ${
+          isGallery ? '' : 'bg-black'
+        }`}
+        style={{
+          mixBlendMode: isGallery ? 'normal' : 'multiply',
+          willChange: 'transform',
+          backgroundColor: isGallery ? 'rgba(255,255,255,1)' : undefined,
+        }}
       />
 
       {children}
