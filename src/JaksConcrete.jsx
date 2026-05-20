@@ -445,6 +445,35 @@ export default function JaksConcrete() {
     },
   ]
 
+  // #region agent log
+  useEffect(() => {
+    const findOverflow = (label) => {
+      const vw = document.documentElement.clientWidth
+      const sw = document.documentElement.scrollWidth
+      const overflowing = []
+      document.querySelectorAll('*').forEach(el => {
+        const r = el.getBoundingClientRect()
+        if (r.right > vw + 2 || r.left < -2) {
+          overflowing.push({
+            tag: el.tagName,
+            id: el.id || '',
+            cls: (el.className && typeof el.className === 'string') ? el.className.slice(0, 120) : '',
+            left: Math.round(r.left),
+            right: Math.round(r.right),
+            width: Math.round(r.width),
+            text: (el.textContent || '').slice(0, 40)
+          })
+        }
+      })
+      fetch('http://127.0.0.1:7771/ingest/4eb8e336-dd5f-4ee3-b879-c005834e02fa',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a3a024'},body:JSON.stringify({sessionId:'a3a024',location:'JaksConcrete.jsx:overflow-check',message:'DOM overflow scan '+label,data:{viewportWidth:vw,scrollWidth:sw,hasOverflow:sw>vw,overflowingCount:overflowing.length,elements:overflowing.slice(0,15)},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H4-H5'})}).catch(()=>{})
+    }
+    findOverflow('0ms')
+    const t = setTimeout(() => findOverflow('500ms'), 500)
+    const t2 = setTimeout(() => findOverflow('2000ms'), 2000)
+    return () => { clearTimeout(t); clearTimeout(t2) }
+  }, [])
+  // #endregion
+
   return (
     <div
       className="min-h-screen font-sans antialiased selection:bg-[#FF1E56] selection:text-white md:cursor-none"
@@ -868,7 +897,7 @@ export default function JaksConcrete() {
         </FadeIn>
       </section>
 
-      <section className="border-t border-black/20 bg-white/40 py-24 md:py-40" id="our-work">
+      <section className="border-t border-black/20 bg-white/40 py-24 md:py-40" id="our-work" style={{ overflowX: 'clip' }}>
         <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-16 px-8 md:px-16 lg:grid-cols-12 lg:gap-20">
           <div className="h-fit lg:col-span-5 lg:sticky lg:top-24">
             <FadeIn direction="left">
