@@ -11,8 +11,9 @@ export default function HeroCanvas({ scrollRef, wrapRef, onLoadProgress }) {
   const framesRef = useRef([])
   const readyRef = useRef(false)
   const rafRef = useRef(null)
-  const lastDrawn = useRef(-1)
+  const lastPainted = useRef(null)
   const onLoadProgressRef = useRef(onLoadProgress)
+  const drawFrameRef = useRef(() => {})
 
   onLoadProgressRef.current = onLoadProgress
 
@@ -31,6 +32,8 @@ export default function HeroCanvas({ scrollRef, wrapRef, onLoadProgress }) {
         if (loaded === 1) {
           framesRef.current = imgs
           readyRef.current = true
+          lastPainted.current = null
+          drawFrameRef.current()
         }
         onLoadProgressRef.current?.(loaded, TOTAL_FRAMES)
       }
@@ -49,12 +52,10 @@ export default function HeroCanvas({ scrollRef, wrapRef, onLoadProgress }) {
 
   useEffect(() => {
     const canvas = canvasRef.current
-    const wrap = wrapRef?.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
 
-    function render() {
-      rafRef.current = requestAnimationFrame(render)
+    function drawFrame() {
       if (!readyRef.current) return
 
       const sp = scrollRef.current
@@ -62,9 +63,6 @@ export default function HeroCanvas({ scrollRef, wrapRef, onLoadProgress }) {
         Math.max(Math.floor(sp * (TOTAL_FRAMES - 1)), 0),
         TOTAL_FRAMES - 1
       )
-
-      if (frameIdx === lastDrawn.current) return
-      lastDrawn.current = frameIdx
 
       let img = framesRef.current[frameIdx]
       if (!img) {
@@ -81,6 +79,16 @@ export default function HeroCanvas({ scrollRef, wrapRef, onLoadProgress }) {
       const ch = canvas.height
       if (cw === 0 || ch === 0) return
 
+      const key = `${frameIdx}|${cw}|${ch}`
+      if (key === lastPainted.current) {
+        const wrap = wrapRef?.current
+        if (wrap) {
+          const scale = 1 + sp * 0.06
+          wrap.style.transform = `scale(${scale})`
+        }
+        return
+      }
+
       const imgAspect = img.naturalWidth / img.naturalHeight
       const canvasAspect = cw / ch
       let sx = 0
@@ -96,11 +104,20 @@ export default function HeroCanvas({ scrollRef, wrapRef, onLoadProgress }) {
       }
 
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, cw, ch)
+      lastPainted.current = key
 
+      const wrap = wrapRef?.current
       if (wrap) {
         const scale = 1 + sp * 0.06
         wrap.style.transform = `scale(${scale})`
       }
+    }
+
+    drawFrameRef.current = drawFrame
+
+    function render() {
+      rafRef.current = requestAnimationFrame(render)
+      drawFrame()
     }
 
     render()
@@ -112,6 +129,7 @@ export default function HeroCanvas({ scrollRef, wrapRef, onLoadProgress }) {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
+
     function resize() {
       const parent = canvas.parentElement?.parentElement || canvas.parentElement
       if (!parent) return
@@ -119,7 +137,10 @@ export default function HeroCanvas({ scrollRef, wrapRef, onLoadProgress }) {
       const dpr = Math.min(window.devicePixelRatio, 2)
       canvas.width = rect.width * dpr
       canvas.height = rect.height * dpr
+      lastPainted.current = null
+      drawFrameRef.current()
     }
+
     resize()
     const ro = new ResizeObserver(() => resize())
     ro.observe(canvas.parentElement?.parentElement || canvas.parentElement)

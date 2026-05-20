@@ -141,10 +141,20 @@ const FadeIn = ({ children, delay = 0, className = '', direction = 'up' }) => {
 
 const NAV_ITEMS = [
   { id: 'home', label: 'Home', href: '#home' },
+  { id: 'about', label: 'About Us', href: '#about' },
   { id: 'expertise', label: 'Our Services', href: '#expertise' },
   { id: 'our-work', label: 'Our Work', href: '#our-work' },
-  { id: 'about', label: 'About Us', href: '#about' },
   { id: 'financing', label: 'Financing', href: '#financing' },
+]
+
+const FOOTER_SOCIAL = [
+  { label: 'Facebook', href: 'https://www.facebook.com/yayoo.ca/' },
+  { label: 'LinkedIn', href: 'https://ca.linkedin.com/in/jay-buehler-457a54233' },
+  {
+    label: 'Better Business Bureau',
+    href: 'https://www.bbb.org/ca/ab/calgary/profile/landscape-maintenance/tydaneium-landscaping-construction-0017-139000',
+  },
+  { label: 'Yelp', href: 'https://www.yelp.ca/biz/tydaneium-landscape-and-construction-calgary' },
 ]
 
 export default function JaksConcrete() {
@@ -152,8 +162,12 @@ export default function JaksConcrete() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeNav, setActiveNav] = useState('home')
   const [loadProgress, setLoadProgress] = useState(0)
+  const [displayProgress, setDisplayProgress] = useState(0)
+  const [loadComplete, setLoadComplete] = useState(false)
+  const [introContentReady, setIntroContentReady] = useState(false)
   const [doorOpen, setDoorOpen] = useState(false)
   const [overlayVisible, setOverlayVisible] = useState(true)
+  const loaderStartRef = useRef(0)
   const [activeService, setActiveService] = useState(null)
   const heroScrollRef = useRef(0)
   const legacyTextRef = useRef(null)
@@ -174,13 +188,53 @@ export default function JaksConcrete() {
     const pct = Math.min(100, Math.round((loaded / total) * 100))
     setLoadProgress(pct)
     if (loaded >= total) {
-      setDoorOpen(true)
+      setLoadProgress(100)
+      setLoadComplete(true)
       window.scrollTo(0, 0)
     }
   }, [])
 
   useEffect(() => {
+    const id = setInterval(() => {
+      setDisplayProgress((prev) => {
+        if (prev >= loadProgress) return loadProgress
+        const step = Math.max(1, Math.ceil((loadProgress - prev) * 0.12))
+        return Math.min(loadProgress, prev + step)
+      })
+    }, 40)
+    return () => clearInterval(id)
+  }, [loadProgress])
+
+  useEffect(() => {
+    loaderStartRef.current = Date.now()
+    const t = setTimeout(() => setIntroContentReady(true), 50)
+    return () => clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
+    if (!loadComplete || displayProgress < 100) return
+    const elapsed = Date.now() - loaderStartRef.current
+    const minLoaderMs = 2500
+    const waitBeforeBeat = Math.max(0, minLoaderMs - elapsed)
+    let t2
+    const t1 = setTimeout(() => {
+      t2 = setTimeout(() => setDoorOpen(true), 1500)
+    }, waitBeforeBeat)
+    return () => {
+      clearTimeout(t1)
+      if (t2) clearTimeout(t2)
+    }
+  }, [loadComplete, displayProgress])
+
+  useEffect(() => {
     if (!doorOpen) return
+    heroScrollRef.current = 0
+    if (heroTextRef.current) {
+      heroTextRef.current.style.opacity = '1'
+      heroTextRef.current.style.transform = 'translate3d(0, 0, 0)'
+    }
+    window.dispatchEvent(new Event('scroll'))
+    window.dispatchEvent(new Event('resize'))
     const t = setTimeout(() => setOverlayVisible(false), 2100)
     return () => clearTimeout(t)
   }, [doorOpen])
@@ -342,18 +396,18 @@ export default function JaksConcrete() {
   const testimonials = [
     {
       quote:
-        'Smooth transaction start to finish .. highly recommended for your concrete work .. warranty included! .. Helped us through a bad experience with a prior contractor .. really clean job and clear communication. Thanks Kal and team! 👍🏽',
+        'Smooth transaction start to finish .. highly recommended for your project .. warranty included! .. Helped us through a bad experience with a prior contractor .. really clean job and clear communication. Thanks to the team! 👍🏽',
       author: 'Jimmy Bautista',
       stars: 5,
     },
     {
       quote:
-        "I'm so happy that my friend recommended Jaks Concrete. They did a fantastic job and always on time. Great quality of work for the price. I highly recommend Jaks Concrete.",
+        "I'm so happy that my friend recommended Tydaneium. They did a fantastic job and always on time. Great quality of work for the price. I highly recommend Tydaneium.",
       author: 'David Head',
     },
     {
       quote:
-        'Highly recommended! Jaks stood out from the others I contacted because they were very responsive, keen and passionate about their work. They provided a competitive quote and answered all of my questions regarding the different concrete finishing options. They were easy to coordinate with and schedule. They arrived on time, were very efficient and did a professional job pouring my hottub pad, while being very polite and respectful of my property. I would use them again, and have already recommended them to friends.',
+        'Highly recommended! Tydaneium stood out from the others I contacted because they were very responsive, keen and passionate about their work. They provided a competitive quote and answered all of my questions. They were easy to coordinate with and schedule. They arrived on time, were very efficient, and did a professional job while being very polite and respectful of my property. I would use them again, and have already recommended them to friends.',
       author: 'Ten Two Media',
     },
   ]
@@ -410,35 +464,65 @@ export default function JaksConcrete() {
 
       {overlayVisible ? (
         <div
-          className={`fixed inset-0 z-[9999] flex flex-col bg-[#F6F3EE] ${doorOpen ? 'pointer-events-none' : 'pointer-events-auto'}`}
+          className={`fixed inset-0 z-[9999] ${doorOpen ? 'pointer-events-none' : 'pointer-events-auto'}`}
+          style={{ backgroundColor: doorOpen ? 'transparent' : bgPaper }}
           aria-hidden={doorOpen}
         >
-          <img
-            src="/logo.png"
-            alt="Jaks Concrete"
-            decoding="async"
-            className="absolute right-6 top-6 z-20 h-12 w-auto object-contain md:right-10 md:top-8 md:h-14"
-          />
-
-          <div className="pointer-events-none absolute inset-x-0 top-1/2 z-30 -translate-y-1/2">
-            <div className="h-[2px] w-full bg-black/10">
+          <div className="flex h-full w-full flex-col">
+            <div
+              className={`door-transition flex h-1/2 w-full items-end justify-center border-b border-black/20 px-6 pb-16 ${doorOpen ? '-translate-y-full' : 'translate-y-0'}`}
+              style={{ backgroundColor: bgPaper }}
+            >
               <div
-                className="h-full origin-left bg-[#FF1E56] transition-transform duration-300 ease-out"
-                style={{ transform: `scaleX(${loadProgress / 100})` }}
-              />
+                className="flex max-w-md flex-col items-center gap-3 hyphens-none px-4 text-center"
+                style={{ overflowWrap: 'anywhere' }}
+              >
+                <div className="overflow-hidden">
+                  <span
+                    className={`font-monumental block text-4xl font-normal tracking-tight text-black transition-transform duration-1000 ease-out md:text-5xl ${introContentReady ? 'translate-y-0' : 'translate-y-[150%]'}`}
+                  >
+                    Tydaneium
+                  </span>
+                </div>
+                <div className="overflow-hidden">
+                  <span
+                    className={`block text-[10px] font-semibold uppercase tracking-[0.35em] text-black/55 transition-transform delay-100 duration-1000 ease-out md:text-[11px] md:tracking-[0.4em] ${introContentReady ? 'translate-y-0' : 'translate-y-[150%]'}`}
+                  >
+                    Landscaping | Construction | Maintenance
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div
+              className={`door-transition relative flex h-1/2 w-full flex-col border-t border-black/20 ${doorOpen ? 'translate-y-full' : 'translate-y-0'}`}
+              style={{ backgroundColor: bgPaper }}
+            >
+              <div className="flex flex-1 flex-col items-center pt-12">
+                <div
+                  className={`w-[3px] shrink-0 transition-all duration-[2500ms] ease-[cubic-bezier(0.7,0,0.2,1)] ${introContentReady ? 'h-24' : 'h-0'}`}
+                  style={{ backgroundColor: brandCrimson }}
+                />
+              </div>
+              <div
+                className="pointer-events-none absolute bottom-6 left-6 flex items-baseline gap-1 tabular-nums md:bottom-10 md:left-10"
+                style={{ color: brandCrimson }}
+              >
+                <span
+                  className="font-monumental leading-none tracking-tight"
+                  style={{ fontSize: 'clamp(3rem, 10vw, 8rem)' }}
+                >
+                  {displayProgress}
+                </span>
+                <span
+                  className="font-monumental pb-[0.12em] leading-none opacity-90"
+                  style={{ fontSize: 'clamp(1.5rem, 5vw, 4rem)' }}
+                  aria-hidden
+                >
+                  %
+                </span>
+              </div>
             </div>
           </div>
-
-          <div
-            className={`door-transition flex h-1/2 w-full items-end justify-center border-b border-black/20 bg-[#F6F3EE] px-6 pb-12 ${doorOpen ? '-translate-y-full' : 'translate-y-0'}`}
-          >
-            <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-black/40">
-              {loadProgress}%
-            </span>
-          </div>
-          <div
-            className={`door-transition flex h-1/2 w-full border-t border-black/20 bg-[#F6F3EE] ${doorOpen ? 'translate-y-full' : 'translate-y-0'}`}
-          />
         </div>
       ) : null}
 
@@ -447,18 +531,25 @@ export default function JaksConcrete() {
           isScrolled || mobileMenuOpen ? 'border-b border-black/20 bg-white/80 py-4 shadow-2xl backdrop-blur-3xl' : 'bg-transparent py-6'
         }`}
       >
-        <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 md:px-12">
-            <div className="group flex cursor-pointer items-center gap-4" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-              <img
-                src="/logo.png"
-                alt="Logo"
-                decoding="async"
-                className="h-10 transition-transform duration-700 group-hover:scale-110 md:h-11"
-              />
-              <div className="hidden flex-col border-l border-black/25 pl-4 sm:flex">
-                <span className="text-[12px] font-bold uppercase tracking-[0.3em]">JAKS CONCRETE</span>
-                <span className="mt-0.5 max-w-[11rem] text-[8px] font-medium leading-snug tracking-normal text-black/60 sm:max-w-none sm:text-[9px]">
-                  Your best construction contractors
+        <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-6 md:px-12">
+            <div
+              className="group min-w-0 max-w-[min(100%,36rem)] cursor-pointer hyphens-none sm:max-w-[min(100%,42rem)] lg:max-w-[50%] xl:max-w-none"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="flex flex-col items-start gap-1">
+                <span className="font-monumental text-xl font-normal tracking-tight text-black transition-transform duration-700 group-hover:scale-[1.02] md:text-2xl">
+                  Tydaneium
+                </span>
+                <span className="max-w-full text-[9px] font-semibold uppercase leading-snug tracking-[0.2em] text-black/55">
+                  Landscaping | Construction | Maintenance
                 </span>
               </div>
             </div>
@@ -536,24 +627,24 @@ export default function JaksConcrete() {
             ref={heroTextRef}
             className="relative z-10 w-full max-w-[1600px] px-6 text-center will-change-[opacity,transform]"
           >
-            <div className="mb-8 overflow-hidden">
+            <div className="mb-8 flex justify-center overflow-hidden px-2">
               <span
-                className={`block text-[11px] font-bold uppercase tracking-[0.8em] text-[#FF1E56] transition-all delay-[2500ms] duration-[1500ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${doorOpen ? 'translate-y-0 opacity-100' : 'translate-y-[150%] opacity-0'}`}
+                className={`inline-block max-w-[min(100%,42rem)] rounded-sm border border-black/10 bg-[#F6F3EE]/92 px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.8em] text-[#FF1E56] shadow-[0_2px_12px_rgba(0,0,0,0.08),inset_0_0_0_1px_rgba(255,255,255,0.55)] backdrop-blur-sm transition-all delay-150 duration-[1500ms] ease-[cubic-bezier(0.16,1,0.3,1)] [text-shadow:0_1px_0_rgba(255,255,255,0.45)] sm:px-5 ${doorOpen ? 'translate-y-0 opacity-100' : 'translate-y-[150%] opacity-0'}`}
               >
-                Master Builders of Calgary
+                Home improvement, inside and out
               </span>
             </div>
 
             <h1 className="font-monumental flex flex-col items-center text-[11vw] font-normal leading-[0.85] tracking-[-0.03em] text-black lg:text-[7rem] xl:text-[9rem]">
-              <RevealText text="FOUNDATIONS" delay={2.0} startReveal={doorOpen} wrapperClass="py-4 -my-4" />
+              <RevealText text="FOUNDATIONS" delay={0.25} startReveal={doorOpen} wrapperClass="py-4 -my-4" />
               <div className="mt-4 flex items-center gap-6 md:gap-10">
                 <div
-                  className={`h-[2px] w-12 bg-[#FF1E56] transition-transform delay-[3000ms] duration-[2000ms] md:w-32 ${doorOpen ? 'scale-x-100' : 'scale-x-0'}`}
+                  className={`h-[2px] w-12 bg-[#FF1E56] transition-transform delay-500 duration-[2000ms] md:w-32 ${doorOpen ? 'scale-x-100' : 'scale-x-0'}`}
                 />
                 <span
                   className="inline-block italic text-black/60 transition-all duration-[1600ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
                   style={{
-                    transitionDelay: '2.8s',
+                    transitionDelay: doorOpen ? '0.65s' : '0s',
                     opacity: doorOpen ? 1 : 0,
                     filter: doorOpen ? 'blur(0px)' : 'blur(20px)',
                     transform: doorOpen ? 'translateY(0) scale(1)' : 'translateY(40%) scale(0.9)',
@@ -562,20 +653,20 @@ export default function JaksConcrete() {
                   of stone
                 </span>
                 <div
-                  className={`h-[2px] w-12 bg-[#FF1E56] transition-transform delay-[3000ms] duration-[2000ms] md:w-32 ${doorOpen ? 'scale-x-100' : 'scale-x-0'}`}
+                  className={`h-[2px] w-12 bg-[#FF1E56] transition-transform delay-500 duration-[2000ms] md:w-32 ${doorOpen ? 'scale-x-100' : 'scale-x-0'}`}
                 />
               </div>
             </h1>
 
             <div
-              className={`mx-auto mt-12 max-w-2xl px-6 transition-all delay-[3200ms] duration-[2200ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${doorOpen ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'}`}
+              className={`mx-auto mt-12 max-w-2xl px-6 transition-all delay-700 duration-[2200ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${doorOpen ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'}`}
             >
               <p className="text-center text-[13px] font-medium uppercase leading-relaxed tracking-[0.3em] text-black/70 md:text-[15px]">
               Expert craftsmanship, reliable service, and unmatched quality
               </p>
             </div>
 
-            <div className={`mt-16 transition-all delay-[3600ms] duration-[2000ms] ${doorOpen ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`mt-16 transition-all delay-1000 duration-[2000ms] ${doorOpen ? 'opacity-100' : 'opacity-0'}`}>
               <div className="flex flex-col items-center gap-3">
                 <span className="text-[10px] font-bold uppercase tracking-[0.55em] text-black/90 drop-shadow-[0_1px_0_rgba(255,255,255,0.85)]">
                   Scroll
@@ -587,7 +678,11 @@ export default function JaksConcrete() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1600px] px-8 py-24 md:px-16 md:py-40" id="about">
+      <section
+        className="mx-auto max-w-[1600px] hyphens-none px-8 py-24 md:px-16 md:py-40"
+        id="about"
+        style={{ overflowWrap: 'anywhere' }}
+      >
         <div className="grid grid-cols-1 items-start gap-16 lg:grid-cols-12 lg:gap-20">
           <div className="lg:col-span-5">
             <FadeIn>
@@ -598,7 +693,7 @@ export default function JaksConcrete() {
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                 <div className="h-[2px] w-20 shrink-0 bg-[#FF1E56]" />
                 <span className="max-w-md text-[11px] font-medium leading-snug tracking-wide text-black/55">
-                  Your best construction contractors
+                  Landscaping | Construction | Maintenance
                 </span>
               </div>
             </FadeIn>
@@ -608,10 +703,10 @@ export default function JaksConcrete() {
               <div className="group relative max-w-3xl border-l border-black/20 py-6 pl-8 md:pl-16">
                 <div className="absolute left-[-2px] top-0 h-0 w-[4px] bg-[#FF1E56] opacity-100 transition-all duration-[2.5s] ease-[cubic-bezier(0.7,0,0.2,1)] group-hover:h-full" />
                 <p className="mb-10 font-serif text-2xl italic leading-snug text-black md:text-4xl">
-                  &ldquo;With over 20 years of experience, Jaks Concrete Ltd has been proudly serving Calgary and surrounding areas with top-quality products and exceptional service.&rdquo;
+                  &ldquo;Tydaneium specializes in the full spectrum of home improvement, from structural and exterior work to finishing touches, so you have one trusted partner for every phase of your project.&rdquo;
                 </p>
                 <p className="mb-12 max-w-2xl text-[15px] font-light leading-relaxed text-black/70 md:text-[17px]">
-                  Whether you need concrete, landscaping, or snow removal, we deliver attention to detail at a fair price. Our expert team ensures your residential or commercial project is completed efficiently and professionally.
+                  Landscaping, construction, and maintenance under one roof: we plan with you, execute with care, and stand behind the work. Residential or commercial, we focus on quality, clear communication, and results you can live with for years.
                 </p>
                   <a
                     href="#contact"
@@ -855,7 +950,7 @@ export default function JaksConcrete() {
               Payment options for your project
             </h2>
             <p className="mx-auto mt-6 max-w-2xl text-[16px] font-light leading-relaxed text-black/70">
-              Ask us about financing when you plan your concrete work. We&apos;ll explain what&apos;s available and help you move forward with confidence.
+              Ask us about financing when you plan your project. We&apos;ll explain what&apos;s available and help you move forward with confidence.
             </p>
             <a
               href="#contact"
@@ -869,7 +964,7 @@ export default function JaksConcrete() {
       </section>
 
       <footer
-        className="relative z-10 overflow-hidden border-t border-black/20 bg-[#F0EBE3] pb-10 pt-20 text-black md:pt-28"
+        className="relative z-10 overflow-hidden bg-[#F0EBE3] pb-10 pt-20 text-black md:pt-28"
         id="contact"
       >
         <div className="relative z-10 mx-auto max-w-[1600px] px-8 md:px-16">
@@ -882,16 +977,16 @@ export default function JaksConcrete() {
                 SPEAK <br className="sm:hidden" /> WITH US.
               </h2>
               <p className="mx-auto mt-8 max-w-lg text-[15px] font-light leading-relaxed text-black/60">
-                Residential and commercial concrete in Calgary. Call or email for an estimate—we reply promptly.
+                Home improvement across landscaping, construction, and maintenance. Call or email for an estimate. We reply promptly.
               </p>
               <div className="mx-auto mt-12 grid w-full max-w-md grid-cols-1 gap-3 sm:max-w-2xl sm:grid-cols-2 sm:gap-4">
                 <a
-                  href="tel:4036048687"
+                  href="tel:+14034799998"
                   className="liquid-cta group relative flex min-h-[52px] w-full items-center gap-3 overflow-hidden border border-black/25 px-5 py-3.5 font-sans transition-colors hover:border-[#FF1E56]"
                 >
                   <Phone size={18} className="relative z-10 shrink-0 text-[#FF1E56]" aria-hidden />
                   <span className="relative z-10 min-w-0 flex-1 text-left text-[14px] font-bold leading-tight tracking-tight text-black md:text-[15px]">
-                    (403) 604-8687
+                    (403) 479 9998
                   </span>
                   <ArrowUpRight
                     size={16}
@@ -900,12 +995,12 @@ export default function JaksConcrete() {
                   />
                 </a>
                 <a
-                  href="mailto:jaksconcrete403@gmail.com"
+                  href="mailto:info@tydaneium.com"
                   className="liquid-cta group relative flex min-h-[52px] w-full items-center gap-3 overflow-hidden border border-black/25 px-5 py-3.5 font-sans transition-colors hover:border-[#FF1E56]"
                 >
                   <Mail size={18} className="relative z-10 shrink-0 text-[#FF1E56]" aria-hidden />
                   <span className="relative z-10 min-w-0 flex-1 break-all text-left text-[12px] font-bold leading-snug tracking-tight text-black sm:text-[13px]">
-                    jaksconcrete403@gmail.com
+                    info@tydaneium.com
                   </span>
                   <ArrowUpRight
                     size={16}
@@ -917,89 +1012,95 @@ export default function JaksConcrete() {
             </FadeIn>
           </div>
 
-          <div className="grid grid-cols-1 gap-14 border-b border-black/15 pb-14 lg:grid-cols-12 lg:gap-12 lg:pb-16">
-            <div className="flex flex-col items-center text-center lg:col-span-4 lg:items-start lg:text-left">
-              <img
-                src="/logo.png"
-                alt="Jaks Concrete Ltd."
-                loading="lazy"
-                decoding="async"
-                className="h-12 w-auto cursor-pointer object-contain opacity-90 transition-opacity hover:opacity-100 md:h-14"
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              />
-              <p className="mt-5 max-w-sm text-[14px] font-light leading-relaxed text-black/65">
-                Foundations of stone—driveways, pads, patios, and structural work built to last.
-              </p>
-              <p className="mt-6 flex items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-[0.35em] text-black/50 lg:justify-start">
-                <MapPin size={14} className="shrink-0 text-[#FF1E56]" aria-hidden />
-                Calgary, Alberta
-              </p>
-            </div>
-
-            <nav className="lg:col-span-3" aria-label="Footer">
-              <h3 className="mb-5 text-center text-[11px] font-bold uppercase tracking-[0.4em] text-black/45 lg:text-left">
-                Navigate
-              </h3>
-              <ul className="flex flex-col gap-3 text-center lg:text-left">
-                {NAV_ITEMS.map((item) => (
-                  <li key={item.id}>
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            <div className="flex min-h-[280px] flex-col justify-between gap-10 border-b border-black/20 px-0 py-10 md:border-b-0 md:border-r md:py-14 md:pr-12">
+              <div className="text-left">
+                <button
+                  type="button"
+                  className="w-full max-w-md text-left hyphens-none"
+                  style={{ overflowWrap: 'anywhere' }}
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                >
+                  <span className="font-monumental block text-3xl font-normal tracking-tight text-black transition-opacity hover:opacity-80 md:text-4xl">
+                    Tydaneium
+                  </span>
+                  <span className="mt-2 block max-w-full text-[9px] font-semibold uppercase leading-snug tracking-[0.28em] text-black/55">
+                    Landscaping | Construction | Maintenance
+                  </span>
+                </button>
+                <p className="mt-6 max-w-md text-[14px] font-light leading-relaxed text-black/65">
+                  Landscaping, construction, and maintenance for homes and businesses: one team for your full improvement roadmap.
+                </p>
+                <ul className="mt-8 space-y-3">
+                  <li>
                     <a
-                      href={item.href}
-                      className="text-[13px] font-medium text-black/70 transition-colors hover:text-black"
+                      href="tel:+14034799998"
+                      className="inline-flex items-center gap-3 text-[14px] font-medium text-black/80 transition-colors hover:text-[#FF1E56]"
                     >
-                      {item.label}
+                      <Phone size={16} className="shrink-0 text-[#FF1E56]" aria-hidden />
+                      (403) 479 9998
                     </a>
                   </li>
-                ))}
-              </ul>
-            </nav>
-
-            <div className="lg:col-span-5">
-              <h3 className="mb-5 text-center text-[11px] font-bold uppercase tracking-[0.4em] text-black/45 lg:text-left">
-                Contact
-              </h3>
-              <ul className="space-y-4 text-center lg:text-left">
-                <li>
-                  <a
-                    href="tel:4036048687"
-                    className="inline-flex items-center justify-center gap-3 text-[15px] text-black/80 transition-colors hover:text-[#FF1E56] lg:justify-start"
-                  >
-                    <Phone size={18} className="shrink-0 text-[#FF1E56]" aria-hidden />
-                    (403) 604-8687
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="mailto:jaksconcrete403@gmail.com"
-                    className="inline-flex items-center justify-center gap-3 break-all text-[15px] text-black/80 transition-colors hover:text-[#FF1E56] lg:justify-start"
-                  >
-                    <Mail size={18} className="shrink-0 text-[#FF1E56]" aria-hidden />
-                    jaksconcrete403@gmail.com
-                  </a>
-                </li>
-              </ul>
-              <p className="mt-8 text-center text-[12px] leading-relaxed text-black/50 lg:text-left">
-                Your best construction contractors · Serving Calgary and surrounding areas
+                  <li>
+                    <a
+                      href="mailto:info@tydaneium.com"
+                      className="inline-flex items-center gap-3 break-all text-[14px] font-medium text-black/80 transition-colors hover:text-[#FF1E56]"
+                    >
+                      <Mail size={16} className="shrink-0 text-[#FF1E56]" aria-hidden />
+                      info@tydaneium.com
+                    </a>
+                  </li>
+                  <li className="flex items-start gap-3 text-[12px] font-bold uppercase tracking-[0.28em] text-black/50">
+                    <MapPin size={16} className="mt-0.5 shrink-0 text-[#FF1E56]" aria-hidden />
+                    Calgary, Alberta
+                  </li>
+                </ul>
+                <p className="mt-6 text-[12px] leading-relaxed text-black/50">
+                  Serving Calgary and surrounding areas.
+                </p>
+              </div>
+              <p className="text-left text-[11px] font-medium uppercase tracking-[0.22em] text-black/45">
+                © {new Date().getFullYear()} Tydaneium. All rights reserved.
               </p>
             </div>
-          </div>
 
-          <div className="flex flex-col items-center justify-between gap-8 pt-10 md:flex-row md:gap-6">
-            <div className="flex flex-wrap items-center justify-center gap-4 md:justify-start">
-              <div className="flex items-center gap-2.5 rounded-sm border border-black/20 bg-white/50 px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.2em] text-black/70">
-                <Star size={15} className="fill-[#FF1E56] text-[#FF1E56]" aria-hidden />
-                100% Satisfaction
+            <div className="flex min-h-[280px] flex-col justify-between gap-10 px-0 py-10 md:py-14 md:pl-12">
+              <div>
+                <h3 className="mb-6 text-left text-[11px] font-bold uppercase tracking-[0.4em] text-black/45">
+                  Connect
+                </h3>
+                <ul className="space-y-4 text-left">
+                  {FOOTER_SOCIAL.map((item) => (
+                    <li key={item.href}>
+                      <a
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[15px] font-medium text-black/75 transition-colors hover:text-[#FF1E56]"
+                      >
+                        {item.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <div className="flex items-center gap-2.5 rounded-sm border border-black/20 bg-white/50 px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.2em] text-black/70">
-                <span className="flex h-6 w-6 items-center justify-center rounded-sm bg-[#FF1E56] text-[9px] font-black text-black">
-                  BBB
-                </span>
-                Accredited
-              </div>
+              <nav aria-label="Footer">
+                <ul className="flex flex-wrap gap-x-5 gap-y-2 text-left text-[11px] font-medium uppercase tracking-[0.22em] text-black/50">
+                  {NAV_ITEMS.map((item) => (
+                    <li key={item.id}>
+                      <a href={item.href} className="transition-colors hover:text-black">
+                        {item.label}
+                      </a>
+                    </li>
+                  ))}
+                  <li>
+                    <a href="#contact" className="transition-colors hover:text-black">
+                      Contact
+                    </a>
+                  </li>
+                </ul>
+              </nav>
             </div>
-            <p className="text-center text-[11px] font-medium uppercase tracking-[0.2em] text-black/45">
-              © {new Date().getFullYear()} Jaks Concrete Ltd. All rights reserved.
-            </p>
           </div>
         </div>
       </footer>

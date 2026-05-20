@@ -1,6 +1,6 @@
 # jaks-construction
 
-Marketing site for **Jaks Concrete Ltd.** (Vite + React + Tailwind).
+Marketing site for **Tydaneium** (Vite + React + Tailwind).
 
 ```bash
 npm install && npm run dev
