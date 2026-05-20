@@ -172,6 +172,8 @@ export default function JaksConcrete() {
   const heroScrollRef = useRef(0)
   const legacyTextRef = useRef(null)
   const heroCanvasWrapRef = useRef(null)
+  const introLoaderWordRef = useRef(null)
+  const introLoaderTaglineRef = useRef(null)
 
   const heroSectionRef = useRef(null)
   const heroTextRef = useRef(null)
@@ -235,7 +237,7 @@ export default function JaksConcrete() {
     }
     window.dispatchEvent(new Event('scroll'))
     window.dispatchEvent(new Event('resize'))
-    const t = setTimeout(() => setOverlayVisible(false), 2100)
+    const t = setTimeout(() => setOverlayVisible(false), 2350)
     return () => clearTimeout(t)
   }, [doorOpen])
 
@@ -259,7 +261,11 @@ export default function JaksConcrete() {
           heroScrollRef.current = p
 
           if (heroTextRef.current) {
-            const fadeOut = Math.max(1 - p * 3, 0)
+            // Keep hero copy readable until near the final frame, then fade out smoothly.
+            const fadeStart = 0.5
+            const fadeEnd = 1
+            const t = Math.min(Math.max((p - fadeStart) / (fadeEnd - fadeStart), 0), 1)
+            const fadeOut = 1 - t
             const lift = p * 80
             heroTextRef.current.style.opacity = fadeOut
             heroTextRef.current.style.transform = `translate3d(0, ${-lift}px, 0)`
@@ -424,7 +430,6 @@ export default function JaksConcrete() {
           __html: `
         html { scroll-behavior: smooth; }
         .font-monumental { font-family: 'Playfair Display', 'Cinzel', serif; }
-        .door-transition { transition: transform 2s cubic-bezier(0.7, 0, 0.2, 1); }
         @keyframes marquee { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
         .animate-marquee { animation: marquee 50s linear infinite; }
         .liquid-cta::before {
@@ -465,62 +470,90 @@ export default function JaksConcrete() {
       {overlayVisible ? (
         <div
           className={`fixed inset-0 z-[9999] ${doorOpen ? 'pointer-events-none' : 'pointer-events-auto'}`}
-          style={{ backgroundColor: doorOpen ? 'transparent' : bgPaper }}
+          style={{ backgroundColor: 'transparent' }}
           aria-hidden={doorOpen}
         >
-          <div className="flex h-full w-full flex-col">
+          {/* Full-bleed panels — slide off; typography lives above so nothing is clipped at the seam */}
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div
-              className={`door-transition flex h-1/2 w-full items-end justify-center border-b border-black/20 px-6 pb-16 ${doorOpen ? '-translate-y-full' : 'translate-y-0'}`}
-              style={{ backgroundColor: bgPaper }}
-            >
+              className="absolute left-0 right-0 top-0 h-1/2 border-b border-black/15 will-change-transform"
+              style={{
+                backgroundColor: bgPaper,
+                transform: doorOpen ? 'translate3d(0,-100%,0)' : 'translate3d(0,0,0)',
+                transition: 'transform 1.8s cubic-bezier(0.76, 0, 0.12, 1)',
+              }}
+            />
+            <div
+              className="absolute bottom-0 left-0 right-0 h-1/2 border-t border-black/15 will-change-transform"
+              style={{
+                backgroundColor: bgPaper,
+                transform: doorOpen ? 'translate3d(0,100%,0)' : 'translate3d(0,0,0)',
+                transition: 'transform 1.8s cubic-bezier(0.76, 0, 0.12, 1)',
+              }}
+            />
+          </div>
+
+          <div
+            className={`pointer-events-none absolute inset-0 z-10 flex flex-col transition-opacity duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none ${
+              doorOpen ? 'opacity-0' : 'opacity-100'
+            }`}
+          >
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 pb-28 pt-10 sm:pb-36">
               <div
-                className="flex max-w-md flex-col items-center gap-3 hyphens-none px-4 text-center"
+                className="flex w-full max-w-xl -translate-y-2 flex-col items-center gap-1.5 text-center hyphens-none sm:-translate-y-6"
                 style={{ overflowWrap: 'anywhere' }}
               >
-                <div className="overflow-hidden">
-                  <span
-                    className={`font-monumental block text-4xl font-normal tracking-tight text-black transition-transform duration-1000 ease-out md:text-5xl ${introContentReady ? 'translate-y-0' : 'translate-y-[150%]'}`}
-                  >
-                    Tydaneium
-                  </span>
-                </div>
-                <div className="overflow-hidden">
-                  <span
-                    className={`block text-[10px] font-semibold uppercase tracking-[0.35em] text-black/55 transition-transform delay-100 duration-1000 ease-out md:text-[11px] md:tracking-[0.4em] ${introContentReady ? 'translate-y-0' : 'translate-y-[150%]'}`}
-                  >
-                    Landscaping | Construction | Maintenance
-                  </span>
-                </div>
+                <span
+                  ref={introLoaderWordRef}
+                  className={`font-monumental block font-normal leading-[1.22] tracking-tight text-black transition-[opacity,transform] duration-[1000ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transform-none motion-reduce:opacity-100 motion-reduce:transition-none text-[clamp(2.125rem,5.5vw,3.85rem)] [padding-bottom:0.08em] ${
+                    introContentReady
+                      ? 'translate-y-0 opacity-100'
+                      : 'translate-y-[0.65rem] opacity-0'
+                  }`}
+                >
+                  Tydaneium
+                </span>
+                <span
+                  ref={introLoaderTaglineRef}
+                  className={`max-w-full px-2 text-[9px] font-semibold uppercase leading-snug tracking-[0.2em] text-black/55 transition-[opacity,transform] delay-[90ms] duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transform-none motion-reduce:opacity-100 motion-reduce:transition-none ${
+                    introContentReady
+                      ? 'translate-y-0 opacity-100'
+                      : 'translate-y-2 opacity-0'
+                  }`}
+                >
+                  Landscaping | Construction | Maintenance
+                </span>
               </div>
             </div>
+
+            {/* Starts at seam and grows down into the bottom door */}
             <div
-              className={`door-transition relative flex h-1/2 w-full flex-col border-t border-black/20 ${doorOpen ? 'translate-y-full' : 'translate-y-0'}`}
-              style={{ backgroundColor: bgPaper }}
+              className={`pointer-events-none absolute left-1/2 top-1/2 z-[11] w-[3px] -translate-x-1/2 origin-top bg-[#FF1E56] transition-[transform,opacity] duration-[900ms] ease-[cubic-bezier(0.76,0,0.12,1)] motion-reduce:transition-none ${
+                introContentReady ? 'scale-y-100 opacity-100' : 'scale-y-0 opacity-0'
+              } mt-6`}
+              style={{ height: '6.5rem' }}
+              aria-hidden
+            />
+
+            <div
+              className={`absolute bottom-6 left-6 flex items-baseline gap-1 tabular-nums transition-[opacity,transform] duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transform-none motion-reduce:opacity-100 md:bottom-10 md:left-10 ${
+                introContentReady ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
+              }`}
+              style={{ color: brandCrimson }}
             >
-              <div className="flex flex-1 flex-col items-center pt-12">
-                <div
-                  className={`w-[3px] shrink-0 transition-all duration-[2500ms] ease-[cubic-bezier(0.7,0,0.2,1)] ${introContentReady ? 'h-24' : 'h-0'}`}
-                  style={{ backgroundColor: brandCrimson }}
-                />
-              </div>
-              <div
-                className="pointer-events-none absolute bottom-6 left-6 flex items-baseline gap-1 tabular-nums md:bottom-10 md:left-10"
-                style={{ color: brandCrimson }}
+              <span
+                className="font-monumental leading-none tracking-tight"
+                style={{ fontSize: 'clamp(3rem, 10vw, 8rem)' }}
               >
-                <span
-                  className="font-monumental leading-none tracking-tight"
-                  style={{ fontSize: 'clamp(3rem, 10vw, 8rem)' }}
-                >
-                  {displayProgress}
-                </span>
-                <span
-                  className="font-monumental pb-[0.12em] leading-none opacity-90"
-                  style={{ fontSize: 'clamp(1.5rem, 5vw, 4rem)' }}
-                  aria-hidden
-                >
-                  %
-                </span>
-              </div>
+                {displayProgress}
+              </span>
+              <span
+                className="font-monumental pb-[0.12em] leading-none opacity-90"
+                style={{ fontSize: 'clamp(1.5rem, 5vw, 4rem)' }}
+                aria-hidden
+              >
+                %
+              </span>
             </div>
           </div>
         </div>
@@ -686,7 +719,7 @@ export default function JaksConcrete() {
         <div className="grid grid-cols-1 items-start gap-16 lg:grid-cols-12 lg:gap-20">
           <div className="lg:col-span-5">
             <FadeIn>
-              <span className="mb-6 block text-[11px] font-bold uppercase tracking-[0.6em] text-[#FF1E56]">THE GENESIS</span>
+              <span className="mb-6 block text-[11px] font-bold uppercase tracking-[0.6em] text-[#FF1E56]">ABOUT US</span>
               <h2 className="font-monumental mb-10 text-5xl uppercase leading-[0.85] tracking-tighter md:text-7xl lg:text-8xl">
                 BUILT ON <br /> INTEGRITY.
               </h2>
