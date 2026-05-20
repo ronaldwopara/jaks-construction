@@ -420,7 +420,7 @@ export default function JaksConcrete() {
 
   return (
     <div
-      className="min-h-screen font-sans antialiased selection:bg-[#FF1E56] selection:text-white md:cursor-none"
+      className="min-h-screen overflow-x-hidden font-sans antialiased selection:bg-[#FF1E56] selection:text-white md:cursor-none"
       style={{ backgroundColor: bgPaper, color: textInk }}
     >
       <FilmGrain />
@@ -428,7 +428,9 @@ export default function JaksConcrete() {
       <style
         dangerouslySetInnerHTML={{
           __html: `
-        html { scroll-behavior: smooth; }
+        html { scroll-behavior: smooth; background: ${bgPaper}; overflow-x: hidden; }
+        body { background: ${bgPaper}; overflow-x: hidden; }
+        #root { overflow-x: hidden; }
         .font-monumental { font-family: 'Playfair Display', 'Cinzel', serif; }
         @keyframes marquee { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
         .animate-marquee { animation: marquee 50s linear infinite; }
