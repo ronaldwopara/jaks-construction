@@ -1,17 +1,20 @@
 import { useEffect, useRef } from 'react'
 
-const TOTAL_FRAMES = 192
+export const TOTAL_FRAMES = 96
 
 function framePath(i) {
   return `/frames/frames_${String(i).padStart(3, '0')}.webp`
 }
 
-export default function HeroCanvas({ scrollRef, wrapRef }) {
+export default function HeroCanvas({ scrollRef, wrapRef, onLoadProgress }) {
   const canvasRef = useRef(null)
   const framesRef = useRef([])
   const readyRef = useRef(false)
   const rafRef = useRef(null)
   const lastDrawn = useRef(-1)
+  const onLoadProgressRef = useRef(onLoadProgress)
+
+  onLoadProgressRef.current = onLoadProgress
 
   useEffect(() => {
     let cancelled = false
@@ -22,17 +25,26 @@ export default function HeroCanvas({ scrollRef, wrapRef }) {
       const img = new Image()
       img.decoding = 'async'
       img.onload = () => {
+        if (cancelled) return
         imgs[i] = img
         loaded++
-        if (loaded === TOTAL_FRAMES && !cancelled) {
+        if (loaded === 1) {
           framesRef.current = imgs
           readyRef.current = true
         }
+        onLoadProgressRef.current?.(loaded, TOTAL_FRAMES)
+      }
+      img.onerror = () => {
+        if (cancelled) return
+        loaded++
+        onLoadProgressRef.current?.(loaded, TOTAL_FRAMES)
       }
       img.src = framePath(i + 1)
     }
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -54,7 +66,15 @@ export default function HeroCanvas({ scrollRef, wrapRef }) {
       if (frameIdx === lastDrawn.current) return
       lastDrawn.current = frameIdx
 
-      const img = framesRef.current[frameIdx]
+      let img = framesRef.current[frameIdx]
+      if (!img) {
+        for (let i = frameIdx - 1; i >= 0; i--) {
+          if (framesRef.current[i]) {
+            img = framesRef.current[i]
+            break
+          }
+        }
+      }
       if (!img) return
 
       const cw = canvas.width
@@ -63,7 +83,10 @@ export default function HeroCanvas({ scrollRef, wrapRef }) {
 
       const imgAspect = img.naturalWidth / img.naturalHeight
       const canvasAspect = cw / ch
-      let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight
+      let sx = 0
+      let sy = 0
+      let sw = img.naturalWidth
+      let sh = img.naturalHeight
       if (imgAspect > canvasAspect) {
         sw = img.naturalHeight * canvasAspect
         sx = (img.naturalWidth - sw) / 2

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Menu, X, ArrowUpRight, Star, Phone, Mail, MapPin } from 'lucide-react'
 import HeroCanvas from './HeroCanvas'
 
@@ -151,8 +151,9 @@ export default function JaksConcrete() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeNav, setActiveNav] = useState('home')
-  const [appLoaded, setAppLoaded] = useState(false)
+  const [loadProgress, setLoadProgress] = useState(0)
   const [doorOpen, setDoorOpen] = useState(false)
+  const [overlayVisible, setOverlayVisible] = useState(true)
   const [activeService, setActiveService] = useState(null)
   const heroScrollRef = useRef(0)
   const legacyTextRef = useRef(null)
@@ -169,17 +170,20 @@ export default function JaksConcrete() {
   const bgPaper = '#F6F3EE'
   const textInk = '#111827'
 
-  useEffect(() => {
-    const t1 = setTimeout(() => setAppLoaded(true), 600)
-    const t2 = setTimeout(() => {
+  const handleHeroLoadProgress = useCallback((loaded, total) => {
+    const pct = Math.min(100, Math.round((loaded / total) * 100))
+    setLoadProgress(pct)
+    if (loaded >= total) {
       setDoorOpen(true)
       window.scrollTo(0, 0)
-    }, 1800)
-    return () => {
-      clearTimeout(t1)
-      clearTimeout(t2)
     }
   }, [])
+
+  useEffect(() => {
+    if (!doorOpen) return
+    const t = setTimeout(() => setOverlayVisible(false), 2100)
+    return () => clearTimeout(t)
+  }, [doorOpen])
 
   useEffect(() => {
     let wasScrolled = false
@@ -404,37 +408,39 @@ export default function JaksConcrete() {
         style={{ mixBlendMode: 'multiply', willChange: 'transform' }}
       />
 
-      <div className={`pointer-events-none fixed inset-0 z-[9999] flex flex-col ${doorOpen ? 'invisible delay-[2000ms] transition-all' : 'visible'}`}>
+      {overlayVisible ? (
         <div
-          className={`door-transition flex h-1/2 w-full items-end justify-center border-b border-black/20 bg-[#F6F3EE] px-6 pb-16 ${doorOpen ? '-translate-y-full' : 'translate-y-0'}`}
+          className={`fixed inset-0 z-[9999] flex flex-col bg-[#F6F3EE] ${doorOpen ? 'pointer-events-none' : 'pointer-events-auto'}`}
+          aria-hidden={doorOpen}
         >
-          <div className="flex flex-col items-center gap-5">
-            <div className="overflow-hidden">
-              <img
-                src="/logo.png"
-                alt="Jaks Concrete"
-                decoding="async"
-                className={`mx-auto h-16 w-auto max-w-[min(220px,70vw)] object-contain object-bottom transition-transform duration-1000 ease-out md:h-20 ${appLoaded ? 'translate-y-0' : 'translate-y-[150%]'}`}
+          <img
+            src="/logo.png"
+            alt="Jaks Concrete"
+            decoding="async"
+            className="absolute right-6 top-6 z-20 h-12 w-auto object-contain md:right-10 md:top-8 md:h-14"
+          />
+
+          <div className="pointer-events-none absolute inset-x-0 top-1/2 z-30 -translate-y-1/2">
+            <div className="h-[2px] w-full bg-black/10">
+              <div
+                className="h-full origin-left bg-[#FF1E56] transition-transform duration-300 ease-out"
+                style={{ transform: `scaleX(${loadProgress / 100})` }}
               />
             </div>
-            <div className="overflow-hidden">
-              <span
-                className={`block text-center text-[11px] font-bold uppercase tracking-[1em] text-black/60 transition-transform delay-100 duration-1000 ease-out ${appLoaded ? 'translate-y-0' : 'translate-y-[150%]'}`}
-              >
-                JAKS CONCRETE
-              </span>
-            </div>
           </div>
-        </div>
-        <div
-          className={`door-transition flex h-1/2 w-full items-start justify-center border-t border-black/20 bg-[#F6F3EE] pt-16 ${doorOpen ? 'translate-y-full' : 'translate-y-0'}`}
-        >
+
           <div
-            className="h-24 w-[3px] origin-top bg-[#FF1E56] transition-transform delay-500 duration-1200"
-            style={{ transform: appLoaded ? 'scaleY(1)' : 'scaleY(0)' }}
+            className={`door-transition flex h-1/2 w-full items-end justify-center border-b border-black/20 bg-[#F6F3EE] px-6 pb-12 ${doorOpen ? '-translate-y-full' : 'translate-y-0'}`}
+          >
+            <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-black/40">
+              {loadProgress}%
+            </span>
+          </div>
+          <div
+            className={`door-transition flex h-1/2 w-full border-t border-black/20 bg-[#F6F3EE] ${doorOpen ? 'translate-y-full' : 'translate-y-0'}`}
           />
         </div>
-      </div>
+      ) : null}
 
       <header
         className={`fixed top-0 z-[90] w-full transition-all duration-1000 ${
@@ -516,7 +522,11 @@ export default function JaksConcrete() {
           <div className="absolute inset-0 -z-10 overflow-hidden">
             <div ref={heroCanvasWrapRef} className="absolute inset-0 origin-center will-change-transform">
               <div className="absolute inset-0 opacity-80 brightness-[0.9] contrast-[1.1] filter">
-                <HeroCanvas scrollRef={heroScrollRef} wrapRef={heroCanvasWrapRef} />
+                <HeroCanvas
+                  scrollRef={heroScrollRef}
+                  wrapRef={heroCanvasWrapRef}
+                  onLoadProgress={handleHeroLoadProgress}
+                />
               </div>
             </div>
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#F6F3EE_100%)] opacity-70" />
