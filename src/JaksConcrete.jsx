@@ -455,11 +455,12 @@ export default function JaksConcrete() {
       <style
         dangerouslySetInnerHTML={{
           __html: `
+        *, *::before, *::after { box-sizing: border-box; }
         html { scroll-behavior: smooth; background: ${bgPaper}; }
         body { background: ${bgPaper}; overflow-x: hidden; max-width: 100vw; }
-        * { max-width: 100%; }
-        .animate-marquee { max-width: none; width: max-content; }
-        img, video, canvas, svg { max-width: 100%; height: auto; }
+        img, video, canvas, svg, iframe, embed, object { max-width: 100%; height: auto; }
+        pre, code { max-width: 100%; overflow-x: auto; }
+        .animate-marquee { max-width: none !important; width: max-content; }
         .font-monumental { font-family: 'Playfair Display', 'Cinzel', serif; }
         @keyframes marquee { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
         .animate-marquee { animation: marquee 50s linear infinite; }
