@@ -457,6 +457,8 @@ export default function JaksConcrete() {
           __html: `
         html { scroll-behavior: smooth; background: ${bgPaper}; }
         body { background: ${bgPaper}; overflow-x: hidden; max-width: 100vw; }
+        * { max-width: 100%; }
+        img, video, canvas, svg { max-width: 100%; height: auto; }
         .font-monumental { font-family: 'Playfair Display', 'Cinzel', serif; }
         @keyframes marquee { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
         .animate-marquee { animation: marquee 50s linear infinite; }
